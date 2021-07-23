@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { User } from './user.model';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 /**
  * Class Users Service
@@ -9,55 +11,67 @@ import { User } from './user.model';
 
 @Injectable()
 export class UsersService {
-    private user: User[] = [];
+
+    constructor(@InjectModel('User') private readonly userModel: Model<User>) {
+
+    }
 
     /**
     * Set new user in the database.
     * @return user id
     */
-    insertUser(email: string, password: string) {
+     async insertUser(email: string, pwd: string) {
         const userId = Math.random().toString();
-        const newProducts = new User(userId, email, password);
-        this.user.push(newProducts);
-        return userId;
+        const newProducts = new this.userModel({
+            email: email,
+            password: pwd
+        });
+        const result = await newProducts.save().then();
+
+        return result.id as string;
     }   
 
    /**
-   * Get user with is email address in the database.
+   * Get user with is email address in the database. 
    * @return user informations
    */
-    getUser(userId: string) {
-        const user = this.findUser(userId)[0];
-        return { ...user };
+    async getUser(userId: string) {
+        const user = await this.findUser(userId);
+        return { id: user.id, email: user.email, password: user.password };
     }
 
    /**
    * Modify user password in the database.
    * @return boolean result
    */
-    updateUser(id: string, email: string, password: string) {
-        const [user, index] = this.findUser(id);
-        const updateUser = { ...user };
+   async updateUser(id: string, email: string, password: string) {
+        const userUpdated = await this.findUser(id);
+    
         if (email) {
-            updateUser.email = email;
+            userUpdated.email = email;
         }
         if (password) {
-            updateUser.password = password;
+            userUpdated.password = password;
         }
         
-        this.user[index] = updateUser;
+       userUpdated.save();
     }
 
    /**
    * Get user information with is email address in the database.
    * @return user informations
    */
-   private findUser(id: string): [User, number] {
-        const userIndex = this.user.findIndex((prod) => prod.id === id)
-        const user = this.user[userIndex];
-        if (!user) {
-            throw new NotFoundException('Could not found product. ')
+    private async findUser(id: string): Promise<User> {
+        let userFind;
+        try {
+            userFind = await this.userModel.findById(id).exec();
+        } catch(error) {
+            throw new NotFoundException('Could not found user.')
         }
-        return [user, userIndex];
+       
+        if (!userFind) {
+            throw new NotFoundException('Could not found user.')
+       }
+        return userFind;
     }
 }

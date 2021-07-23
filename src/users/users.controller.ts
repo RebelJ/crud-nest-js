@@ -16,12 +16,12 @@ export class UsersController {
    * @return user id generated
    */
     @Post()
-    addUser(
+    async addUser(
         @Body('email') userEmail: string,
         @Body('password') userPwd: string,
     ) {
 
-        const generatedId = this.usersService.insertUser(
+        const generatedId = await this.usersService.insertUser(
             userEmail,
             userPwd,
    
@@ -35,8 +35,9 @@ export class UsersController {
    * @return user information
    */
     @Get(':id')
-    getUser(@Param('id') userId: string) {
-        return this.usersService.getUser(userId);
+    async getUser(@Param('id') userId: string) {
+        const user = await this.usersService.getUser(userId);
+        return user;
     }
 
    /**
